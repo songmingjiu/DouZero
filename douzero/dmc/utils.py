@@ -77,9 +77,10 @@ def create_optimizers(flags, learner_model):
 
 def create_buffers(flags, device_iterator):
     """
-    We create buffers for different positions as well as
-    for different devices (i.e., GPU). That is, each device
-    will have three buffers for the three positions.
+    为每个设备(例如:GPU)创建缓冲区
+    We create buffers for different positions as well as for different devices (i.e., GPU). 
+    每个设备上有三个缓冲区，分别对应三个斗地主的位置（地主，地主上家，地主下家）
+    That is, each device will have three buffers for the three positions.
     """
     T = flags.unroll_length
     positions = ['landlord', 'landlord_up', 'landlord_down']
@@ -97,6 +98,7 @@ def create_buffers(flags, device_iterator):
                 obs_z=dict(size=(T, 5, 162), dtype=torch.int8),
             )
             _buffers: Buffers = {key: [] for key in specs}
+            # flags.num_buffers 共享内存缓冲区的数量
             for _ in range(flags.num_buffers):
                 for key in _buffers:
                     if not device == "cpu":
@@ -104,18 +106,21 @@ def create_buffers(flags, device_iterator):
                     else:
                         _buffer = torch.empty(**specs[key]).to(torch.device('cpu')).share_memory_()
                     _buffers[key].append(_buffer)
+            # 在每个设备，每个角色位置，都有一个缓冲区
             buffers[device][position] = _buffers
     return buffers
 
 def act(i, device, free_queue, full_queue, model, buffers, flags):
     """
+    这个函数生成数据，送到buffer中供训练使用
     This function will run forever until we stop it. It will generate
     data from the environment and send the data to buffer. It uses
     a free queue and full queue to syncup with the main process.
+    flags 中保存了所有运行命令行的参数
     """
     positions = ['landlord', 'landlord_up', 'landlord_down']
     try:
-        T = flags.unroll_length
+        T = flags.unroll_length #展开长度（时间维度）
         log.info('Device %s Actor %i started.', str(device), i)
 
         env = create_env(flags)
@@ -130,7 +135,7 @@ def act(i, device, free_queue, full_queue, model, buffers, flags):
         size = {p: 0 for p in positions}
 
         position, obs, env_output = env.initial()
-
+        # 一直循环运行
         while True:
             while True:
                 obs_x_no_action_buf[position].append(env_output['obs_x_no_action'])

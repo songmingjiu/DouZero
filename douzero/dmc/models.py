@@ -8,11 +8,16 @@ import numpy as np
 import torch
 from torch import nn
 
+# 地主算法模型，继承了nn.Module类
 class LandlordLstmModel(nn.Module):
     def __init__(self):
         super().__init__()
+        # 定义6层全连接网络
+        # 输入维度input_size 162， 隐藏状态维度hidden-size 128
+        # bidirectional 默认是false, 是否双向传播
+        # batch_first=True，则input为(batch, input_size)，第一个参数是batch        
         self.lstm = nn.LSTM(162, 128, batch_first=True)
-        self.dense1 = nn.Linear(373 + 128, 512)
+        self.dense1 = nn.Linear(373 + 128, 512) # 为什么是373+128？
         self.dense2 = nn.Linear(512, 512)
         self.dense3 = nn.Linear(512, 512)
         self.dense4 = nn.Linear(512, 512)
@@ -43,11 +48,16 @@ class LandlordLstmModel(nn.Module):
                 action = torch.argmax(x,dim=0)[0]
             return dict(action=action)
 
+#农民算法模型，继承了nn.Module类
 class FarmerLstmModel(nn.Module):
     def __init__(self):
         super().__init__()
+        # 定义6层全连接网络
+        # 输入维度input_size 162， 隐藏状态维度hidden-size 128
+        # bidirectional 默认是false, 是否双向传播
+        # batch_first=True，则input为(batch, input_size)，第一个参数是batch
         self.lstm = nn.LSTM(162, 128, batch_first=True)
-        self.dense1 = nn.Linear(484 + 128, 512)
+        self.dense1 = nn.Linear(484 + 128, 512) # 为什么是484+128
         self.dense2 = nn.Linear(512, 512)
         self.dense3 = nn.Linear(512, 512)
         self.dense4 = nn.Linear(512, 512)
@@ -84,6 +94,7 @@ model_dict['landlord'] = LandlordLstmModel
 model_dict['landlord_up'] = FarmerLstmModel
 model_dict['landlord_down'] = FarmerLstmModel
 
+# 这里定义模型算法类
 class Model:
     """
     The wrapper for the three models. We also wrap several
@@ -93,6 +104,7 @@ class Model:
         self.models = {}
         if not device == "cpu":
             device = 'cuda:' + str(device)
+        # 创建一个模型，并指定到设备上运行
         self.models['landlord'] = LandlordLstmModel().to(torch.device(device))
         self.models['landlord_up'] = FarmerLstmModel().to(torch.device(device))
         self.models['landlord_down'] = FarmerLstmModel().to(torch.device(device))

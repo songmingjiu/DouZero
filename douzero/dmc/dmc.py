@@ -20,6 +20,7 @@ def compute_loss(logits, targets):
     loss = ((logits.squeeze(-1) - targets)**2).mean()
     return loss
 
+# 模型学习过程
 def learn(position,
           actor_models,
           model,
@@ -42,6 +43,7 @@ def learn(position,
     mean_episode_return_buf[position].append(torch.mean(episode_returns).to(device))
         
     with lock:
+        # batch first: obs_z 是批大小，obs_x 是 input_data
         learner_outputs = model(obs_z, obs_x, return_value=True)
         loss = compute_loss(learner_outputs['values'], target)
         stats = {
@@ -58,12 +60,15 @@ def learn(position,
             actor_model.get_model(position).load_state_dict(model.state_dict())
         return stats
 
+# 模型训练
 def train(flags):  
     """
+    这是训练主方法
     This is the main funtion for training. It will first
     initilize everything, such as buffers, optimizers, etc.
     Then it will start subprocesses as actors. Then, it will call
     learning function with  multiple threads.
+    flags中保存了所有运行的命令行参数
     """
     if not flags.actor_device_cpu or flags.training_device != 'cpu':
         if not torch.cuda.is_available():
@@ -96,7 +101,7 @@ def train(flags):
     # Initialize buffers
     buffers = create_buffers(flags, device_iterator)
    
-    # Initialize queues
+    # Initialize queues 初始化队列，因为要训练3个角色的模型，所以，分别建了3个对列
     actor_processes = []
     ctx = mp.get_context('spawn')
     free_queue = {}
@@ -108,16 +113,16 @@ def train(flags):
         free_queue[device] = _free_queue
         full_queue[device] = _full_queue
 
-    # Learner model for training
+    # Learner model for training 专门创建一个学习模型
     learner_model = Model(device=flags.training_device)
 
-    # Create optimizers
+    # Create optimizers，创建优化器
     optimizers = create_optimizers(flags, learner_model)
 
     # Stat Keys
     stat_keys = [
-        'mean_episode_return_landlord',
-        'loss_landlord',
+        'mean_episode_return_landlord', #地主模型损失函数
+        'loss_landlord',    #地主模型损失评估
         'mean_episode_return_landlord_up',
         'loss_landlord_up',
         'mean_episode_return_landlord_down',
@@ -126,7 +131,7 @@ def train(flags):
     frames, stats = 0, {k: 0 for k in stat_keys}
     position_frames = {'landlord':0, 'landlord_up':0, 'landlord_down':0}
 
-    # Load models if any
+    # Load models if any，如果有断点 checkpoint 保存的模型，先加载上来
     if flags.load_model and os.path.exists(checkpointpath):
         checkpoint_states = torch.load(
             checkpointpath, map_location=("cuda:"+str(flags.training_device) if flags.training_device != "cpu" else "cpu")
@@ -141,7 +146,7 @@ def train(flags):
         position_frames = checkpoint_states["position_frames"]
         log.info(f"Resuming preempted job, current stats:\n{stats}")
 
-    # Starting actor processes
+    # Starting actor processes 开始角色进程，不停地模型生成数据，为学习过程供数
     for device in device_iterator:
         num_actors = flags.num_actors
         for i in range(flags.num_actors):
@@ -179,7 +184,7 @@ def train(flags):
     for device in device_iterator:
         locks[device] = {'landlord': threading.Lock(), 'landlord_up': threading.Lock(), 'landlord_down': threading.Lock()}
     position_locks = {'landlord': threading.Lock(), 'landlord_up': threading.Lock(), 'landlord_down': threading.Lock()}
-
+    # 开始不停地训练
     for device in device_iterator:
         for i in range(flags.num_threads):
             for position in ['landlord', 'landlord_up', 'landlord_down']:
@@ -188,11 +193,13 @@ def train(flags):
                 thread.start()
                 threads.append(thread)
     
+    # 定义定时保存 checkpoint 的方法
     def checkpoint(frames):
         if flags.disable_checkpoint:
             return
         log.info('Saving checkpoint to %s', checkpointpath)
         _models = learner_model.get_models()
+        # 保存模型
         torch.save({
             'model_state_dict': {k: _models[k].state_dict() for k in _models},
             'optimizer_state_dict': {k: optimizers[k].state_dict() for k in optimizers},
@@ -202,7 +209,7 @@ def train(flags):
             'position_frames': position_frames
         }, checkpointpath)
 
-        # Save the weights for evaluation purpose
+        # Save the weights for evaluation purpose 保存权重和评估结果
         for position in ['landlord', 'landlord_up', 'landlord_down']:
             model_weights_dir = os.path.expandvars(os.path.expanduser(
                 '%s/%s/%s' % (flags.savedir, flags.xpid, position+'_weights_'+str(frames)+'.ckpt')))
@@ -211,6 +218,7 @@ def train(flags):
     fps_log = []
     timer = timeit.default_timer
     try:
+        # flags.save-interval 保存模型的时间间隔（以分钟为单位）
         last_checkpoint_time = timer() - flags.save_interval * 60
         while frames < flags.total_frames:
             start_frames = frames
