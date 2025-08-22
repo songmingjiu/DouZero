@@ -110,13 +110,19 @@ def create_buffers(flags, device_iterator):
             buffers[device][position] = _buffers
     return buffers
 
+# i 训练角色编号
+# device 是一个运行的训练设备GPU或CPU
+# free_queue device设备上的三个队列{'landlord': ctx.SimpleQueue(), 'landlord_up': ctx.SimpleQueue(), 'landlord_down': ctx.SimpleQueue()}
+# full_queue device设备上的三个队列{'landlord': ctx.SimpleQueue(), 'landlord_up': ctx.SimpleQueue(), 'landlord_down': ctx.SimpleQueue()}
+# model 角色训练模型
+# buffers 这个设备上的缓冲区
+# flags 命令行所有参数
 def act(i, device, free_queue, full_queue, model, buffers, flags):
     """
     这个函数生成数据，送到buffer中供训练使用
     This function will run forever until we stop it. It will generate
     data from the environment and send the data to buffer. It uses
     a free queue and full queue to syncup with the main process.
-    flags 中保存了所有运行命令行的参数
     """
     positions = ['landlord', 'landlord_up', 'landlord_down']
     try:

@@ -38,6 +38,7 @@ class Env:
 
         # Initialize players
         # We use three dummy player for the target position
+        # 初始化三个虚拟玩家，分别表示地主和两个农民
         self.players = {}
         for position in ['landlord', 'landlord_up', 'landlord_down']:
             self.players[position] = DummyAgent(position)
@@ -53,17 +54,21 @@ class Env:
         will be re-initialized with a new deck of cards.
         This function is usually called when a game is over.
         """
+        # 把所有游戏数据清空
         self._env.reset()
 
-        # Randomly shuffle the deck
+        # 复制一幅牌
         _deck = deck.copy()
+        # 洗牌
         np.random.shuffle(_deck)
+        # 发牌，剩3张底牌
         card_play_data = {'landlord': _deck[:20],
                           'landlord_up': _deck[20:37],
                           'landlord_down': _deck[37:54],
                           'three_landlord_cards': _deck[17:20],
                           }
         for key in card_play_data:
+            # 排手牌排序
             card_play_data[key].sort()
 
         # Initialize the cards
@@ -195,19 +200,18 @@ def get_obs(infoset):
     several fields. These fields will be used to train the model.
     One can play with those features to improve the performance.
 
-    `position` is a string that can be landlord/landlord_down/landlord_up
+    `position` 是表达玩家位置的字符串，形如 landlord/landlord_down/landlord_up
+    表示是地主，地主上家，地主下家
 
-    `x_batch` is a batch of features (excluding the hisorical moves).
-    It also encodes the action feature
+    `x_batch` 一批游戏信息(不包括历史动作),It also encodes the action feature
 
-    `z_batch` is a batch of features with hisorical moves only.
+    `z_batch` 是仅包括历史动作的一批游戏信息.
 
     `legal_actions` is the legal moves
 
-    `x_no_action`: the features (exluding the hitorical moves and
-    the action features). It does not have the batch dim.
+    `x_no_action`: the features (不包括历史信息和action features). It does not have the batch dim.
 
-    `z`: same as z_batch but not a batch.
+    `z`: 仅包括历史动作，但不是一批游戏信息.
     """
     if infoset.player_position == 'landlord':
         return _get_obs_landlord(infoset)

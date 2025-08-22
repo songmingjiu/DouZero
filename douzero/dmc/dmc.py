@@ -21,6 +21,13 @@ def compute_loss(logits, targets):
     return loss
 
 # 模型学习过程
+# position 是哪个角色'landlord', 'landlord_up', 'landlord_down'
+# actor_models 所有训练角色的模型合集
+# model 哪一个角色的'landlord', 'landlord_up', 'landlord_down'学习模型
+# batch 学习数据
+# optimizer 哪一个角色的'landlord', 'landlord_up', 'landlord_down'模型优化器
+# flags 命令行所有运行参数
+# lock 哪一个角色的'landlord', 'landlord_up', 'landlord_down'的线程锁
 def learn(position,
           actor_models,
           model,
@@ -29,6 +36,7 @@ def learn(position,
           flags,
           lock):
     """Performs a learning (optimization) step."""
+    # 指定 torch 运行的设备
     if flags.training_device != "cpu":
         device = torch.device('cuda:'+str(flags.training_device))
     else:
@@ -147,20 +155,26 @@ def train(flags):
         log.info(f"Resuming preempted job, current stats:\n{stats}")
 
     # Starting actor processes 开始角色进程，不停地模型生成数据，为学习过程供数
+    # 如果是2个GPU卡，每个卡2个角色，那么这里最多启动4个玩家训练线程
     for device in device_iterator:
         num_actors = flags.num_actors
         for i in range(flags.num_actors):
             actor = ctx.Process(
+                # 调用 utils.py文件中的act方法
                 target=act,
                 args=(i, device, free_queue[device], full_queue[device], models[device], buffers[device], flags))
             actor.start()
             actor_processes.append(actor)
 
+    # device 是哪个训练设备
+    # position 是哪个角色'landlord', 'landlord_up', 'landlord_down'
+    # 剩下三个参数都是线程锁
     def batch_and_learn(i, device, position, local_lock, position_lock, lock=threading.Lock()):
         """Thread target for the learning process."""
         nonlocal frames, position_frames, stats
         while frames < flags.total_frames:
             batch = get_batch(free_queue[device][position], full_queue[device][position], buffers[device][position], flags, local_lock)
+            # 调用了本文件中的 learn 方法
             _stats = learn(position, models, learner_model.get_model(position), batch, 
                 optimizers[position], flags, position_lock)
 
@@ -181,6 +195,7 @@ def train(flags):
 
     threads = []
     locks = {}
+    # 为每个设备上的地主，农民角色指定线程锁
     for device in device_iterator:
         locks[device] = {'landlord': threading.Lock(), 'landlord_up': threading.Lock(), 'landlord_down': threading.Lock()}
     position_locks = {'landlord': threading.Lock(), 'landlord_up': threading.Lock(), 'landlord_down': threading.Lock()}

@@ -18,9 +18,9 @@ bombs = [[3, 3, 3, 3], [4, 4, 4, 4], [5, 5, 5, 5], [6, 6, 6, 6],
 class GameEnv(object):
 
     def __init__(self, players):
-
+        # 出牌历史
         self.card_play_action_seq = []
-
+        # 三张底牌
         self.three_landlord_cards = None
         self.game_over = False
 
@@ -28,11 +28,11 @@ class GameEnv(object):
         self.player_utility_dict = None
 
         self.players = players
-
+        # 最后一手出的牌
         self.last_move_dict = {'landlord': [],
                                'landlord_up': [],
                                'landlord_down': []}
-
+        # 三家已经出的牌
         self.played_cards = {'landlord': [],
                              'landlord_up': [],
                              'landlord_down': []}
@@ -342,31 +342,44 @@ class InfoSet(object):
     historical moves, etc.
     """
     def __init__(self, player_position):
-        # The player position, i.e., landlord, landlord_down, or landlord_up
+        # 当前玩家的位置，地主、地主上家、地主下家
         self.player_position = player_position
-        # The hand cands of the current player. A list.
+
+        # 当前玩家手中的牌，这是一个list数组
         self.player_hand_cards = None
-        # The number of cards left for each player. It is a dict with str-->int 
+
+        # 三个玩家手里剩余牌的数量，是一个字典数据，形如 str-->int 
         self.num_cards_left_dict = None
-        # The three landload cards. A list.
+
+        # 三张地主底牌，是一个list数组
         self.three_landlord_cards = None
-        # The historical moves. It is a list of list
+
+        # 所有的历史出牌动作，是list of list数据，即每个动作是一个数组，所有动作又放到一个数组中
         self.card_play_action_seq = None
-        # The union of the hand cards of the other two players for the current player 
+
+        # 当前玩家之外的另外两家，手中剩余的牌 
         self.other_hand_cards = None
-        # The legal actions for the current move. It is a list of list
+
+        # 当前所有合规的出牌动作，是list of list数据，即每个动作是一个数组，所有动作又放到一个数组中
         self.legal_actions = None
-        # The most recent valid move
+
+        # 最近一个出牌动作
         self.last_move = None
-        # The most recent two moves
+
+        # 最近两个出牌动作
         self.last_two_moves = None
-        # The last moves for all the postions
+
+        # 所有三个位置的玩家，最后出牌的动作
         self.last_move_dict = None
-        # The played cands so far. It is a list.
+
+        # 所有已经出过的牌，是一个数组类型数据
         self.played_cards = None
-        # The hand cards of all the players. It is a dict. 
+
+        # 所有玩家手中的牌，是一个字典数据类型 
         self.all_handcards = None
-        # Last player position that plays a valid move, i.e., not `pass`
+
+        # 最后一个出牌的玩家是谁，不包括“不要”的玩家
         self.last_pid = None
-        # The number of bombs played so far
+
+        # 已经出过的炸弹数量
         self.bomb_num = None
