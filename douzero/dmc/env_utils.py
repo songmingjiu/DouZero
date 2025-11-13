@@ -12,9 +12,11 @@ def _format_observation(obs, device):
     move them to CUDA.
     """
     position = obs['position']
+    # 选择训练设备
     if not device == "cpu":
         device = 'cuda:' + str(device)
     device = torch.device(device)
+    # 将numpy数组转换为torch张量
     x_batch = torch.from_numpy(obs['x_batch']).to(device)
     z_batch = torch.from_numpy(obs['z_batch']).to(device)
     x_no_action = torch.from_numpy(obs['x_no_action'])
@@ -34,9 +36,12 @@ class Environment:
         self.episode_return = None
 
     def initial(self):
+        # 这里的 self.env 是指向 Env 类，调用 reset方法初始化一幅新牌
         initial_position, initial_obs, x_no_action, z = _format_observation(self.env.reset(), self.device)
+        # 返回一个 1*1 的张量，初始值为0
         initial_reward = torch.zeros(1, 1)
         self.episode_return = torch.zeros(1, 1)
+        # 返回一个 1*1 的张量，初始值为1, 布尔类型
         initial_done = torch.ones(1, 1, dtype=torch.bool)
 
         return initial_position, initial_obs, dict(
@@ -47,6 +52,8 @@ class Environment:
             )
         
     def step(self, action):
+        # 这里调用 env.step 方法
+        # obs,reward 奖励值,done 游戏是否结束
         obs, reward, done, _ = self.env.step(action)
 
         self.episode_return += reward
@@ -57,6 +64,7 @@ class Environment:
             self.episode_return = torch.zeros(1, 1)
 
         position, obs, x_no_action, z = _format_observation(obs, self.device)
+        # 改变张量形状为（1，1）
         reward = torch.tensor(reward).view(1, 1)
         done = torch.tensor(done).view(1, 1)
         

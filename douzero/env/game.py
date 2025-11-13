@@ -101,6 +101,7 @@ class GameEnv(object):
         return self.bomb_num
 
     def step(self):
+        # 这里调用 Env文件中DummyAgent.act方法
         action = self.players[self.acting_player_position].act(
             self.game_infoset)
         assert action in self.game_infoset.legal_actions

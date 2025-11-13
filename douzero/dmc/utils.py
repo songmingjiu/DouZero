@@ -119,17 +119,18 @@ def create_buffers(flags, device_iterator):
 # flags 命令行所有参数
 def act(i, device, free_queue, full_queue, model, buffers, flags):
     """
-    这个函数生成数据，送到buffer中供训练使用
-    This function will run forever until we stop it. It will generate
-    data from the environment and send the data to buffer. It uses
-    a free queue and full queue to syncup with the main process.
+    这个函数生成模拟数据,送到buffer中供训练使用
+    此方法会一直运行，直到我们终止它. 它负责从游戏环境environment类生成模拟数据,并发送到buffer中. 
+    它使用free queuet和full queue与主线程同步数据.
     """
     positions = ['landlord', 'landlord_up', 'landlord_down']
     try:
         T = flags.unroll_length #展开长度（时间维度）
         log.info('Device %s Actor %i started.', str(device), i)
 
+        # 这里的 env 是指向 Env对象，包含了虚拟玩家和游戏数据
         env = create_env(flags)
+        # 这里的 env 是指向 Enviroment 对象，初始化训练环境数据
         env = Environment(env, device)
 
         done_buf = {p: [] for p in positions}
@@ -139,7 +140,7 @@ def act(i, device, free_queue, full_queue, model, buffers, flags):
         obs_action_buf = {p: [] for p in positions}
         obs_z_buf = {p: [] for p in positions}
         size = {p: 0 for p in positions}
-
+        # 这里的 env 是指向 Enviroment 对象，初始化一幅牌，所以，每次act方法，只是训练一幅牌
         position, obs, env_output = env.initial()
         # 一直循环运行
         while True:
@@ -152,6 +153,7 @@ def act(i, device, free_queue, full_queue, model, buffers, flags):
                 action = obs['legal_actions'][_action_idx]
                 obs_action_buf[position].append(_cards2tensor(action))
                 size[position] += 1
+                # 这里调用 Enviroment.step方法
                 position, obs, env_output = env.step(action)
                 if env_output['done']:
                     for p in positions:

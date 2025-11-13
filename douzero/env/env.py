@@ -24,9 +24,8 @@ class Env:
     """
     def __init__(self, objective):
         """
-        Objective is wp/adp/logadp. It indicates whether considers
-        bomb in reward calculation. Here, we use dummy agents.
-        This is because, in the orignial game, the players
+        Objective是一种评价赢牌的策略，有wp/adp/logadp三种，用来表示“炸”是否做为奖励计算。
+        Here, we use dummy agents.This is because, in the orignial game, the players
         are `in` the game. Here, we want to isolate
         players and environments to have a more gym style
         interface. To achieve this, we use dummy players
@@ -36,23 +35,19 @@ class Env:
         """
         self.objective = objective
 
-        # Initialize players
-        # We use three dummy player for the target position
         # 初始化三个虚拟玩家，分别表示地主和两个农民
         self.players = {}
         for position in ['landlord', 'landlord_up', 'landlord_down']:
             self.players[position] = DummyAgent(position)
 
-        # Initialize the internal environment
+        # 初始化游戏环境数据
         self._env = GameEnv(self.players)
 
         self.infoset = None
 
     def reset(self):
         """
-        Every time reset is called, the environment
-        will be re-initialized with a new deck of cards.
-        This function is usually called when a game is over.
+        每次调用reset方法, 将重新初始化一幅牌，本方法一般在一局游戏结束时被调用.
         """
         # 把所有游戏数据清空
         self._env.reset()
@@ -79,14 +74,14 @@ class Env:
 
     def step(self, action):
         """
-        Step function takes as input the action, which
-        is a list of integers, and output the next obervation,
-        reward, and a Boolean variable indicating whether the
-        current game is finished. It also returns an empty
-        dictionary that is reserved to pass useful information.
+        本方法输入一个出牌动作(action), 也就是一个整数列表,形如34578
+        输出the next obervation,奖励值(reward), 当前游戏是否结束的标志(Boolean). 
+        本方法也返回一个空的dictionary，用于未来传送有用的信息.
         """
+        # 检查输入的action是否是合规的出牌动作
         assert action in self.infoset.legal_actions
         self.players[self._acting_player_position].set_action(action)
+        # 这里调用 GameEnv.step
         self._env.step()
         self.infoset = self._game_infoset
         done = False
@@ -196,8 +191,7 @@ def get_obs(infoset):
     from the infoset. It has three branches since we encode
     different features for different positions.
     
-    This function will return dictionary named `obs`. It contains
-    several fields. These fields will be used to train the model.
+    此方法返回一个名为`obs`的字典(dictionary)数据结构.它包含一些字段.这些字段将用于模型训练.
     One can play with those features to improve the performance.
 
     `position` 是表达玩家位置的字符串，形如 landlord/landlord_down/landlord_up
@@ -207,7 +201,7 @@ def get_obs(infoset):
 
     `z_batch` 是仅包括历史动作的一批游戏信息.
 
-    `legal_actions` is the legal moves
+    `legal_actions` 指所有规则内的动牌动作
 
     `x_no_action`: the features (不包括历史信息和action features). It does not have the batch dim.
 
@@ -293,8 +287,7 @@ def _get_one_hot_bomb(bomb_num):
 
 def _get_obs_landlord(infoset):
     """
-    Obttain the landlord features. See Table 4 in
-    https://arxiv.org/pdf/2106.06135.pdf
+    Obttain the landlord features. 参见论文中的表4 https://arxiv.org/pdf/2106.06135.pdf
     """
     num_legal_actions = len(infoset.legal_actions)
     my_handcards = _cards2array(infoset.player_hand_cards)

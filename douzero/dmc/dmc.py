@@ -41,8 +41,10 @@ def learn(position,
         device = torch.device('cuda:'+str(flags.training_device))
     else:
         device = torch.device('cpu')
+    # 将数据送到训练设备上
     obs_x_no_action = batch['obs_x_no_action'].to(device)
     obs_action = batch['obs_action'].to(device)
+    # 拼接obs_x_no_action, obs_action这两个张量
     obs_x = torch.cat((obs_x_no_action, obs_action), dim=2).float()
     obs_x = torch.flatten(obs_x, 0, 1)
     obs_z = torch.flatten(batch['obs_z'].to(device), 0, 1).float()
